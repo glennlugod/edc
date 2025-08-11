@@ -1,10 +1,10 @@
 @page "/trials"
 @rendermode InteractiveServer
 @attribute [Authorize]
-@inject TrialService TrialService
 @inject IConfiguration Config
 @inject ITokenAcquisition TokenAcquisition
 @inject NavigationManager NavigationManager
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
 @inject ILogger<Trials> Logger
 
 <PageTitle>Trials</PageTitle>

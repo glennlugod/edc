@@ -1,5 +1,4 @@
 using EDCApp.Components;
-using EDCApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,9 +24,6 @@ builder.Services.AddAuthorizationCore(options =>
     options.AddPolicy("RequireAuthenticatedUser", policy => 
         policy.RequireAuthenticatedUser());
 });
-
-// Add Trial Service
-builder.Services.AddScoped<TrialService>();
 
 var app = builder.Build();
 

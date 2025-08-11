@@ -1,5 +1,7 @@
 using EDCApp.Models;
-using EDCApp.Services;
+using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Query;
+using Microsoft.Identity.Web;
 
 namespace EDCApp.Components.Pages
 {
@@ -11,6 +13,7 @@ namespace EDCApp.Components.Pages
     private bool isEditMode = false;
     private Trial currentTrial = new Trial { TrialName = "" }; // Initialize with a default TrialName
     private Trial? trialToDelete;
+    private IOrganizationService? ServiceClient { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -33,9 +36,14 @@ namespace EDCApp.Components.Pages
         };
 
         // Connect to Dataverse
-        TrialService.ServiceClient = new ServiceClient(new Uri(dataverseUrl), tokenProvider, true);
+        ServiceClient = new ServiceClient(new Uri(dataverseUrl), tokenProvider, true);
 
         await LoadTrials();
+      }
+      catch (MicrosoftIdentityWebChallengeUserException ex)
+      {
+        Console.WriteLine($"Authentication error: {ex.Message}");
+        ConsentHandler.HandleException(ex);        
       }
       catch (Exception ex)
       {
@@ -48,7 +56,26 @@ namespace EDCApp.Components.Pages
     {
       try
       {
-        trials = await TrialService.GetTrialsAsync();
+        if (ServiceClient == null)
+        {
+          throw new InvalidOperationException("ServiceClient is not initialized.");
+        }
+
+        var query = new QueryExpression("new_trial")
+        {
+          ColumnSet = new ColumnSet("new_trialid", "new_trial_name", "new_sponsor", "new_start_date", "new_end_date")
+        };
+
+        var result = await Task.Run(() => ServiceClient.RetrieveMultiple(query));
+
+        trials = result.Entities.Select(entity => new Trial
+        {
+          Id = entity.GetAttributeValue<Guid>("new_trialid"),
+          TrialName = entity.GetAttributeValue<string>("new_trial_name"),
+          Sponsor = entity.GetAttributeValue<string>("new_sponsor"),
+          StartDate = entity.GetAttributeValue<DateTime?>("new_start_date"),
+          EndDate = entity.GetAttributeValue<DateTime?>("new_end_date")
+        }).ToList();
       }
       catch (Exception ex)
       {
@@ -84,13 +111,34 @@ namespace EDCApp.Components.Pages
     {
       try
       {
+        if (ServiceClient == null)
+        {
+          throw new InvalidOperationException("ServiceClient is not initialized.");
+        }
+
         if (isEditMode)
         {
-          await TrialService.UpdateTrialAsync(currentTrial);
+          var entity = new Entity("new_trial", currentTrial.Id)
+          {
+            ["new_trial_name"] = currentTrial.TrialName,
+            ["new_sponsor"] = currentTrial.Sponsor,
+            ["new_start_date"] = currentTrial.StartDate,
+            ["new_end_date"] = currentTrial.EndDate
+          };
+
+          await Task.Run(() => ServiceClient.Update(entity));
         }
         else
         {
-          await TrialService.CreateTrialAsync(currentTrial);
+          var entity = new Entity("new_trial")
+          {
+            ["new_trial_name"] = currentTrial.TrialName,
+            ["new_sponsor"] = currentTrial.Sponsor,
+            ["new_start_date"] = currentTrial.StartDate,
+            ["new_end_date"] = currentTrial.EndDate
+          };
+
+          await Task.Run(() => ServiceClient.Create(entity));
         }
 
         await LoadTrials();
@@ -126,7 +174,12 @@ namespace EDCApp.Components.Pages
       {
         try
         {
-          await TrialService.DeleteTrialAsync(trialToDelete.Id);
+          if (ServiceClient == null)
+          {
+            throw new InvalidOperationException("ServiceClient is not initialized.");
+          }
+
+          await Task.Run(() => ServiceClient.Delete("new_trial", trialToDelete.Id));
           await LoadTrials();
           showDeleteConfirmation = false;
           trialToDelete = null;
