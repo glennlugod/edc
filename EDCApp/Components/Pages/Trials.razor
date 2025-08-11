@@ -131,13 +131,17 @@
     private bool showDeleteConfirmation = false;
     private bool showCreateTrialDialog = false;
     private bool isEditMode = false;
-    private Trial currentTrial = new Trial();
-    private Trial trialToDelete;
+    private Trial currentTrial = new Trial { TrialName = "" }; // Initialize with a default TrialName
+    private Trial? trialToDelete;
 
     protected override async Task OnInitializedAsync()
     {
         try {
             var dataverseUrl = Config["Dataverse:Url"];
+            if (dataverseUrl == null)
+            {
+                throw new InvalidOperationException("Dataverse:Url is not configured.");
+            }
 
             var accessToken = await TokenAcquisition
                 .GetAccessTokenForUserAsync(
@@ -146,7 +150,7 @@
             // Create token provider function for Dataverse
             Func<string, Task<string>> tokenProvider = async (resource) =>
             {
-                return accessToken;
+                return await Task.FromResult(accessToken);
             };
 
             // Connect to Dataverse
@@ -175,19 +179,12 @@
 
     private void OpenCreateTrialDialog()
     {
-        try 
+        currentTrial = new Trial
         {
-            Logger.LogInformation("OpenCreateTrialDialog method called");
-            currentTrial = new Trial();
-            isEditMode = false;
-            showCreateTrialDialog = true;
-            StateHasChanged(); // Explicitly trigger a re-render
-            Logger.LogInformation($"showCreateTrialDialog set to {showCreateTrialDialog}");
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError($"Error in OpenCreateTrialDialog: {ex.Message}");
-        }
+            TrialName = "" // Ensure TrialName is set
+        };
+        isEditMode = false;
+        showCreateTrialDialog = true;
     }
 
     private void OpenEditTrialDialog(Trial trial)
@@ -195,7 +192,7 @@
         currentTrial = new Trial
         {
             Id = trial.Id,
-            TrialName = trial.TrialName,
+            TrialName = trial.TrialName, // Ensure TrialName is set
             Sponsor = trial.Sponsor,
             StartDate = trial.StartDate,
             EndDate = trial.EndDate
@@ -229,7 +226,7 @@
     private void CloseCreateTrialDialog()
     {
         showCreateTrialDialog = false;
-        currentTrial = new Trial();
+        currentTrial = new Trial { TrialName = "" }; // Reset with a default TrialName
     }
 
     private void OpenDeleteConfirmationDialog(Trial trial)

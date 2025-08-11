@@ -9,10 +9,10 @@ namespace EDCApp.Models
 
         [Required(ErrorMessage = "Trial Name is required")]
         [Display(Name = "Trial Name")]
-        public string TrialName { get; set; }
+        public required string TrialName { get; set; }
 
         [Display(Name = "Sponsor")]
-        public string Sponsor { get; set; }
+        public string? Sponsor { get; set; }
 
         [Display(Name = "Start Date")]
         [DataType(DataType.Date)]

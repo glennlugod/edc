@@ -43,7 +43,7 @@ else
             // Create token provider function for Dataverse
             Func<string, Task<string>> tokenProvider = async (resource) =>
             {
-                return accessToken;
+                return await Task.FromResult(accessToken);
             };
 
             // Connect to Dataverse
