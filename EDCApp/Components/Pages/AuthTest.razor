@@ -1,0 +1,30 @@
+@page "/authtest"
+
+<h3>Authentication Test</h3>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="alert alert-success">
+            <h4>✅ You are authenticated!</h4>
+            <p>User: @context.User.Identity?.Name</p>
+            <p>Authentication Type: @context.User.Identity?.AuthenticationType</p>
+            <a href="MicrosoftIdentity/Account/SignOut" class="btn btn-danger">Sign Out</a>
+        </div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="alert alert-warning">
+            <h4>❌ You are not authenticated</h4>
+            <p>Please sign in to access protected resources.</p>
+            <a href="MicrosoftIdentity/Account/SignIn" class="btn btn-primary">Sign In</a>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+<hr />
+
+<h4>Test Links:</h4>
+<ul>
+    <li><a href="/accounts">Go to Accounts (Protected)</a></li>
+    <li><a href="MicrosoftIdentity/Account/SignIn">Direct Sign In Link</a></li>
+    <li><a href="MicrosoftIdentity/Account/SignOut">Direct Sign Out Link</a></li>
+</ul>

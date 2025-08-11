@@ -1,0 +1,9 @@
+<AuthorizeView>
+    <Authorized Context="authContext">
+        <span class="text-white me-2">Hello, @authContext.User.Identity?.Name!</span>
+        <a class="btn btn-outline-light btn-sm" href="MicrosoftIdentity/Account/SignOut">Sign out</a>
+    </Authorized>
+    <NotAuthorized>
+        <a class="btn btn-outline-light btn-sm" href="MicrosoftIdentity/Account/SignIn">Sign in</a>
+    </NotAuthorized>
+</AuthorizeView>
