@@ -1,52 +1,138 @@
 @page "/trials"
+@rendermode InteractiveServer
 @attribute [Authorize]
-@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
 @inject TrialService TrialService
 @inject IConfiguration Config
 @inject ITokenAcquisition TokenAcquisition
-@inject IDialogService DialogService
+@inject NavigationManager NavigationManager
+@inject ILogger<Trials> Logger
 
 <PageTitle>Trials</PageTitle>
 
-<MudContainer>
-    <MudText Typo="Typo.h4" Class="mb-4">Clinical Trials</MudText>
+<div class="container">
+    <h4 class="mb-4">Clinical Trials</h4>
 
-    <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateTrialDialog">
-        Add New Trial
-    </MudButton>
+    <button class="btn btn-primary mb-3" @onclick="OpenCreateTrialDialog">
+        <i class="bi bi-plus-circle me-2"></i>Add New Trial
+    </button>
 
     @if (trials == null)
     {
-        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
     }
     else
     {
-        <MudTable Items="@trials" Hover="true" Striped="true" Class="mt-4">
-            <HeaderContent>
-                <MudTh>Trial Name</MudTh>
-                <MudTh>Sponsor</MudTh>
-                <MudTh>Start Date</MudTh>
-                <MudTh>End Date</MudTh>
-                <MudTh>Actions</MudTh>
-            </HeaderContent>
-            <RowTemplate Context="trial">
-                <MudTd DataLabel="Trial Name">@trial.TrialName</MudTd>
-                <MudTd DataLabel="Sponsor">@trial.Sponsor</MudTd>
-                <MudTd DataLabel="Start Date">@trial.StartDate?.ToShortDateString()</MudTd>
-                <MudTd DataLabel="End Date">@trial.EndDate?.ToShortDateString()</MudTd>
-                <MudTd DataLabel="Actions">
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" 
-                                   OnClick="() => OpenEditTrialDialog(trial)" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
-                                   OnClick="() => OpenDeleteConfirmationDialog(trial)" />
-                </MudTd>
-            </RowTemplate>
-        </MudTable>
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Trial Name</th>
+                    <th>Sponsor</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var trial in trials)
+                {
+                    <tr>
+                        <td>@trial.TrialName</td>
+                        <td>@trial.Sponsor</td>
+                        <td>@trial.StartDate?.ToShortDateString()</td>
+                        <td>@trial.EndDate?.ToShortDateString()</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditTrialDialog(trial)">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteConfirmationDialog(trial)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
     }
-</MudContainer>
+</div>
+
+@if (showCreateTrialDialog)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditMode ? "Edit Trial" : "Create Trial")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateTrialDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@currentTrial" OnValidSubmit="@SubmitTrial">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="form-group">
+                            <label for="trialName">Trial Name</label>
+                            <InputText id="trialName" class="form-control" @bind-Value="currentTrial.TrialName" />
+                            <ValidationMessage For="@(() => currentTrial.TrialName)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="sponsor">Sponsor</label>
+                            <InputText id="sponsor" class="form-control" @bind-Value="currentTrial.Sponsor" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="startDate">Start Date</label>
+                            <InputDate id="startDate" class="form-control" @bind-Value="currentTrial.StartDate" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="endDate">End Date</label>
+                            <InputDate id="endDate" class="form-control" @bind-Value="currentTrial.EndDate" />
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateTrialDialog">Cancel</button>
+                            <button type="submit" class="btn btn-primary">@(isEditMode ? "Update" : "Create")</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirmation)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete the trial '@(trialToDelete?.TrialName)'?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private List<Trial> trials = new();
+    private bool showDeleteConfirmation = false;
+    private bool showCreateTrialDialog = false;
+    private bool isEditMode = false;
+    private Trial currentTrial = new Trial();
+    private Trial trialToDelete;
 
     protected override async Task OnInitializedAsync()
     {
@@ -72,7 +158,6 @@
         {
             // Handle errors gracefully
             Console.WriteLine($"Error connecting to Dataverse: {ex.Message}");
-            ConsentHandler.HandleException(ex);
         }
     }
 
@@ -84,71 +169,95 @@
         }
         catch (Exception ex)
         {
-            await DialogService.ShowMessageBox(
-                "Error",
-                $"Failed to load trials: {ex.Message}",
-                yesText: "OK");
+            Console.WriteLine($"Failed to load trials: {ex.Message}");
         }
     }
 
-    private async Task OpenCreateTrialDialog()
+    private void OpenCreateTrialDialog()
     {
-        var parameters = new DialogParameters
+        try 
         {
-            { nameof(TrialDialog.Trial), new Trial() },
-            { nameof(TrialDialog.IsEditMode), false }
+            Logger.LogInformation("OpenCreateTrialDialog method called");
+            currentTrial = new Trial();
+            isEditMode = false;
+            showCreateTrialDialog = true;
+            StateHasChanged(); // Explicitly trigger a re-render
+            Logger.LogInformation($"showCreateTrialDialog set to {showCreateTrialDialog}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Error in OpenCreateTrialDialog: {ex.Message}");
+        }
+    }
+
+    private void OpenEditTrialDialog(Trial trial)
+    {
+        currentTrial = new Trial
+        {
+            Id = trial.Id,
+            TrialName = trial.TrialName,
+            Sponsor = trial.Sponsor,
+            StartDate = trial.StartDate,
+            EndDate = trial.EndDate
         };
+        isEditMode = true;
+        showCreateTrialDialog = true;
+    }
 
-        var dialog = await DialogService.ShowAsync<TrialDialog>("Create New Trial", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
+    private async Task SubmitTrial()
+    {
+        try
         {
+            if (isEditMode)
+            {
+                await TrialService.UpdateTrialAsync(currentTrial);
+            }
+            else
+            {
+                await TrialService.CreateTrialAsync(currentTrial);
+            }
+
             await LoadTrials();
+            CloseCreateTrialDialog();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error submitting trial: {ex.Message}");
         }
     }
 
-    private async Task OpenEditTrialDialog(Trial trial)
+    private void CloseCreateTrialDialog()
     {
-        var parameters = new DialogParameters
-        {
-            { nameof(TrialDialog.Trial), trial },
-            { nameof(TrialDialog.IsEditMode), true }
-        };
-
-        var dialog = await DialogService.ShowAsync<TrialDialog>("Edit Trial", parameters);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
-        {
-            await LoadTrials();
-        }
+        showCreateTrialDialog = false;
+        currentTrial = new Trial();
     }
 
-    private async Task OpenDeleteConfirmationDialog(Trial trial)
+    private void OpenDeleteConfirmationDialog(Trial trial)
     {
-        bool? result = await DialogService.ShowMessageBox(
-            "Confirm Delete",
-            $"Are you sure you want to delete the trial '{trial.TrialName}'?",
-            yesText: "Delete", cancelText: "Cancel");
+        trialToDelete = trial;
+        showDeleteConfirmation = true;
+    }
 
-        if (result == true)
+    private void CancelDelete()
+    {
+        showDeleteConfirmation = false;
+        trialToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (trialToDelete != null)
         {
             try
             {
-                await TrialService.DeleteTrialAsync(trial.Id);
+                await TrialService.DeleteTrialAsync(trialToDelete.Id);
                 await LoadTrials();
-                await DialogService.ShowMessageBox(
-                    "Success",
-                    "Trial deleted successfully.",
-                    yesText: "OK");
+                showDeleteConfirmation = false;
+                trialToDelete = null;
             }
             catch (Exception ex)
             {
-                await DialogService.ShowMessageBox(
-                    "Error",
-                    $"Failed to delete trial: {ex.Message}",
-                    yesText: "OK");
+                Console.WriteLine($"Failed to delete trial: {ex.Message}");
             }
         }
     }

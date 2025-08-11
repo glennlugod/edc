@@ -1,5 +1,4 @@
 using EDCApp.Components;
-using MudBlazor.Services;
 using EDCApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,9 +14,6 @@ builder.Services.AddRazorPages()
 
 builder.Services.AddServerSideBlazor()
     .AddMicrosoftIdentityConsentHandler();
-
-// Add MudBlazor services
-builder.Services.AddMudServices();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

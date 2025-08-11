@@ -1,76 +1,72 @@
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@page "/trial-dialog"
 
-<MudDialog>
-    <DialogContent>
-        <MudForm @ref="form" @bind-IsValid="@success">
-            <MudTextField @bind-Value="Trial.TrialName" 
-                          For="@(() => Trial.TrialName)"
-                          Label="Trial Name" 
-                          Required="true" 
-                          RequiredError="Trial Name is required!" />
+<div class="modal" tabindex="-1" style="display:block" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@(IsEditMode ? "Edit Trial" : "Create Trial")</h5>
+            </div>
+            <div class="modal-body">
+                <EditForm Model="@Trial" OnValidSubmit="@Submit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
 
-            <MudTextField @bind-Value="Trial.Sponsor" 
-                          Label="Sponsor" />
+                    <div class="form-group">
+                        <label for="trialName">Trial Name</label>
+                        <InputText id="trialName" class="form-control" @bind-Value="Trial.TrialName" />
+                        <ValidationMessage For="@(() => Trial.TrialName)" />
+                    </div>
 
-            <MudDatePicker Label="Start Date" 
-                           @bind-Date="Trial.StartDate"
-                           Validation="@ValidateStartDate" />
+                    <div class="form-group">
+                        <label for="sponsor">Sponsor</label>
+                        <InputText id="sponsor" class="form-control" @bind-Value="Trial.Sponsor" />
+                    </div>
 
-            <MudDatePicker Label="End Date" 
-                           @bind-Date="Trial.EndDate"
-                           Validation="@ValidateEndDate" />
-        </MudForm>
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" 
-                   Variant="Variant.Filled" 
-                   OnClick="Submit" 
-                   Disabled="@(!success)">
-            @(IsEditMode ? "Update" : "Create")
-        </MudButton>
-    </DialogActions>
-</MudDialog>
+                    <div class="form-group">
+                        <label for="startDate">Start Date</label>
+                        <InputDate id="startDate" class="form-control" @bind-Value="Trial.StartDate" />
+                        @if (StartDateError != null)
+                        {
+                            <div class="text-danger">@StartDateError</div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label for="endDate">End Date</label>
+                        <InputDate id="endDate" class="form-control" @bind-Value="Trial.EndDate" />
+                        @if (EndDateError != null)
+                        {
+                            <div class="text-danger">@EndDateError</div>
+                        }
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">@(IsEditMode ? "Update" : "Create")</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
-
     [Inject] private TrialService TrialService { get; set; }
-    [Inject] private IDialogService DialogService { get; set; }
+    [Inject] private NavigationManager NavigationManager { get; set; }
 
-    [Parameter] public Trial Trial { get; set; }
+    [Parameter] public Trial Trial { get; set; } = new Trial();
     [Parameter] public bool IsEditMode { get; set; }
 
-    private MudForm form;
-    private bool success;
-
-    private string ValidateStartDate(DateTime? date)
-    {
-        if (!date.HasValue)
-            return "Start Date is required";
-        
-        if (Trial.EndDate.HasValue && date.Value > Trial.EndDate.Value)
-            return "Start Date must be before End Date";
-        
-        return null;
-    }
-
-    private string ValidateEndDate(DateTime? date)
-    {
-        if (!date.HasValue)
-            return "End Date is required";
-        
-        if (Trial.StartDate.HasValue && date.Value < Trial.StartDate.Value)
-            return "End Date must be after Start Date";
-        
-        return null;
-    }
+    private string StartDateError;
+    private string EndDateError;
 
     private async Task Submit()
     {
-        await form.Validate();
+        StartDateError = ValidateStartDate();
+        EndDateError = ValidateEndDate();
 
-        if (success)
+        if (string.IsNullOrEmpty(StartDateError) && string.IsNullOrEmpty(EndDateError))
         {
             try
             {
@@ -83,20 +79,40 @@
                     await TrialService.CreateTrialAsync(Trial);
                 }
 
-                MudDialog.Close(DialogResult.Ok(true));
+                NavigationManager.NavigateTo("/trials");
             }
             catch (Exception ex)
             {
-                await DialogService.ShowMessageBox(
-                    "Error",
-                    $"Failed to {(IsEditMode ? "update" : "create")} trial: {ex.Message}",
-                    yesText: "OK");
+                // Consider adding a way to display error messages
+                Console.WriteLine($"Error: {ex.Message}");
             }
         }
     }
 
+    private string ValidateStartDate()
+    {
+        if (Trial.StartDate == null)
+            return "Start Date is required";
+        
+        if (Trial.EndDate.HasValue && Trial.StartDate > Trial.EndDate.Value)
+            return "Start Date must be before End Date";
+        
+        return null;
+    }
+
+    private string ValidateEndDate()
+    {
+        if (Trial.EndDate == null)
+            return "End Date is required";
+        
+        if (Trial.StartDate.HasValue && Trial.EndDate.Value < Trial.StartDate.Value)
+            return "End Date must be after Start Date";
+        
+        return null;
+    }
+
     private void Cancel()
     {
-        MudDialog.Cancel();
+        NavigationManager.NavigateTo("/trials");
     }
 }
