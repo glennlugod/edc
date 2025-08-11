@@ -1,0 +1,155 @@
+@page "/trials"
+@attribute [Authorize]
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+@inject TrialService TrialService
+@inject IConfiguration Config
+@inject ITokenAcquisition TokenAcquisition
+@inject IDialogService DialogService
+
+<PageTitle>Trials</PageTitle>
+
+<MudContainer>
+    <MudText Typo="Typo.h4" Class="mb-4">Clinical Trials</MudText>
+
+    <MudButton Color="Color.Primary" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateTrialDialog">
+        Add New Trial
+    </MudButton>
+
+    @if (trials == null)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else
+    {
+        <MudTable Items="@trials" Hover="true" Striped="true" Class="mt-4">
+            <HeaderContent>
+                <MudTh>Trial Name</MudTh>
+                <MudTh>Sponsor</MudTh>
+                <MudTh>Start Date</MudTh>
+                <MudTh>End Date</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="trial">
+                <MudTd DataLabel="Trial Name">@trial.TrialName</MudTd>
+                <MudTd DataLabel="Sponsor">@trial.Sponsor</MudTd>
+                <MudTd DataLabel="Start Date">@trial.StartDate?.ToShortDateString()</MudTd>
+                <MudTd DataLabel="End Date">@trial.EndDate?.ToShortDateString()</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" 
+                                   OnClick="() => OpenEditTrialDialog(trial)" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" 
+                                   OnClick="() => OpenDeleteConfirmationDialog(trial)" />
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+</MudContainer>
+
+@code {
+    private List<Trial> trials = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try {
+            var dataverseUrl = Config["Dataverse:Url"];
+
+            var accessToken = await TokenAcquisition
+                .GetAccessTokenForUserAsync(
+                    new[] { $"{dataverseUrl}/.default" });
+
+            // Create token provider function for Dataverse
+            Func<string, Task<string>> tokenProvider = async (resource) =>
+            {
+                return accessToken;
+            };
+
+            // Connect to Dataverse
+            TrialService.ServiceClient = new ServiceClient(new Uri(dataverseUrl), tokenProvider, true);
+
+            await LoadTrials();
+        }
+        catch (Exception ex)
+        {
+            // Handle errors gracefully
+            Console.WriteLine($"Error connecting to Dataverse: {ex.Message}");
+            ConsentHandler.HandleException(ex);
+        }
+    }
+
+    private async Task LoadTrials()
+    {
+        try
+        {
+            trials = await TrialService.GetTrialsAsync();
+        }
+        catch (Exception ex)
+        {
+            await DialogService.ShowMessageBox(
+                "Error",
+                $"Failed to load trials: {ex.Message}",
+                yesText: "OK");
+        }
+    }
+
+    private async Task OpenCreateTrialDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(TrialDialog.Trial), new Trial() },
+            { nameof(TrialDialog.IsEditMode), false }
+        };
+
+        var dialog = await DialogService.ShowAsync<TrialDialog>("Create New Trial", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadTrials();
+        }
+    }
+
+    private async Task OpenEditTrialDialog(Trial trial)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(TrialDialog.Trial), trial },
+            { nameof(TrialDialog.IsEditMode), true }
+        };
+
+        var dialog = await DialogService.ShowAsync<TrialDialog>("Edit Trial", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadTrials();
+        }
+    }
+
+    private async Task OpenDeleteConfirmationDialog(Trial trial)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Confirm Delete",
+            $"Are you sure you want to delete the trial '{trial.TrialName}'?",
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            try
+            {
+                await TrialService.DeleteTrialAsync(trial.Id);
+                await LoadTrials();
+                await DialogService.ShowMessageBox(
+                    "Success",
+                    "Trial deleted successfully.",
+                    yesText: "OK");
+            }
+            catch (Exception ex)
+            {
+                await DialogService.ShowMessageBox(
+                    "Error",
+                    $"Failed to delete trial: {ex.Message}",
+                    yesText: "OK");
+            }
+        }
+    }
+}

@@ -1,9 +1,11 @@
 ﻿@page "/accounts"
+@attribute [Authorize]
+
 @using Microsoft.PowerPlatform.Dataverse.Client
 @using Microsoft.Identity.Web
 @inject ITokenAcquisition TokenAcquisition
 @inject IConfiguration Config
-@attribute [Authorize]
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
 
 <h3>Accounts</h3>
 @if (accounts == null)
@@ -34,11 +36,14 @@ else
                 return;
             }
 
+            var accessToken = await TokenAcquisition
+                .GetAccessTokenForUserAsync(
+                    new[] { $"{dataverseUrl}/.default" });
+
             // Create token provider function for Dataverse
             Func<string, Task<string>> tokenProvider = async (resource) =>
             {
-                return await TokenAcquisition.GetAccessTokenForUserAsync(
-                    new[] { $"{dataverseUrl}/.default" });
+                return accessToken;
             };
 
             // Connect to Dataverse
@@ -57,7 +62,7 @@ else
         {
             // Handle errors gracefully
             Console.WriteLine($"Error connecting to Dataverse: {ex.Message}");
-            accounts = new List<Microsoft.Xrm.Sdk.Entity>();
+            ConsentHandler.HandleException(ex);
         }
     }
 }

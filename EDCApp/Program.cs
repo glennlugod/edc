@@ -1,25 +1,37 @@
 using EDCApp.Components;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
+using MudBlazor.Services;
+using EDCApp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// OIDC Auth
+// OIDC Auth with Enhanced Configuration
 builder.Services.AddAuthentication(OpenIdConnectDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApp(builder.Configuration.GetSection("AzureAd"))
     .EnableTokenAcquisitionToCallDownstreamApi(new[] { $"{builder.Configuration["Dataverse:Url"]}/.default" })
     .AddInMemoryTokenCaches();
 
-builder.Services.AddRazorPages().AddMicrosoftIdentityUI();
-builder.Services.AddServerSideBlazor().AddMicrosoftIdentityConsentHandler();
+builder.Services.AddRazorPages()
+    .AddMicrosoftIdentityUI();
+
+builder.Services.AddServerSideBlazor()
+    .AddMicrosoftIdentityConsentHandler();
+
+// Add MudBlazor services
+builder.Services.AddMudServices();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Add authorization services
-builder.Services.AddAuthorizationCore();
+// Add authorization services with more granular policies
+builder.Services.AddAuthorizationCore(options =>
+{
+    options.AddPolicy("RequireAuthenticatedUser", policy => 
+        policy.RequireAuthenticatedUser());
+});
+
+// Add Trial Service
+builder.Services.AddScoped<TrialService>();
 
 var app = builder.Build();
 
@@ -27,7 +39,6 @@ var app = builder.Build();
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
@@ -44,7 +55,6 @@ app.UseAntiforgery();
 app.MapRazorPages();
 app.MapControllers();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
