@@ -1,0 +1,98 @@
+@page "/visits"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@inject IConfiguration Config
+@inject ITokenAcquisition TokenAcquisition
+@inject NavigationManager NavigationManager
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+
+<PageTitle>Visits</PageTitle>
+
+<div class="container-fluid">
+    <h4 class="mb-4">Visits</h4>
+
+    <button class="btn btn-primary mb-3" @onclick="CreateVisit">
+        <i class="bi bi-plus-circle me-2"></i>Add New Visit
+    </button>
+
+    @if (visits == null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else
+    {
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Visit Number</th>
+                    <th>Visit Date</th>
+                    <th>Status</th>
+                    <th>Subject</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var visit in visits)
+                {
+                    <tr>
+                        <td>@visit.VisitNumber</td>
+                        <td>@visit.VisitDate.ToShortDateString()</td>
+                        <td>@GetStatusText(visit.Status)</td>
+                        <td>@GetSubjectName(visit.SubjectId)</td>
+                        <td>
+                            <button class="btn btn-sm btn-secondary me-2" @onclick="() => EditVisit(visit)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteVisit(visit)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (ShowModal)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(IsEditing ? "Edit Visit" : "Create Visit")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label>Visit Number</label>
+                        <input type="text" class="form-control" @bind="currentVisit.VisitNumber" />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>Visit Date</label>
+                        <input type="date" class="form-control" 
+                               @bind="currentVisit.VisitDate" 
+                               @bind:format="yyyy-MM-dd" />
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>Visit Status</label>
+                        <select class="form-control" @bind="currentVisit.Status">
+                            <option value="1">Planned</option>
+                            <option value="2">In Progress</option>
+                            <option value="3">Completed</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>Subject</label>
+                        <select class="form-control" @bind="currentVisit.SubjectId">
+                            @foreach (var subject in subjects)
+                            {
+                                <option value="@subject.SubjectId">@subject.SubjectCode</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveVisit">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}

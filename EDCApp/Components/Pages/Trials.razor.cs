@@ -1,7 +1,6 @@
 using EDCApp.Models;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
-using Microsoft.Identity.Web;
 
 namespace EDCApp.Components.Pages
 {
