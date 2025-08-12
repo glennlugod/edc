@@ -42,7 +42,7 @@ namespace EDCApp.Components.Pages
       catch (MicrosoftIdentityWebChallengeUserException ex)
       {
         Console.WriteLine($"Authentication error: {ex.Message}");
-        ConsentHandler.HandleException(ex);        
+        ConsentHandler.HandleException(ex);
       }
       catch (Exception ex)
       {

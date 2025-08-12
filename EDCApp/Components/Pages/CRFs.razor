@@ -1,0 +1,56 @@
+@page "/crfs"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@inject IConfiguration Config
+@inject ITokenAcquisition TokenAcquisition
+@inject NavigationManager NavigationManager
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+@inject ILogger<CRFs> Logger
+
+<PageTitle>Case Report Forms (CRFs)</PageTitle>
+
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>Case Report Forms</h4>
+        <button class="btn btn-primary" @onclick='() => NavigationManager.NavigateTo("/crform/create")'>
+            <i class="bi bi-plus-circle me-1"></i>Add New CRF
+        </button>
+    </div>
+
+    @if (crfs == null)
+    {
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>CRF Title</th>
+                    <th>Form Type</th>
+                    <th>Completed Date</th>
+                    <th>Created On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var crf in crfs)
+                {
+                    <tr>
+                        <td>@crf.CRFTitle</td>
+                        <td>@crf.FormType</td>
+                        <td>@crf.CompletedDate?.ToShortDateString()</td>
+                        <td>@crf.CreatedOn.ToShortDateString()</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" @onclick="() => NavigateToCRForm(crf)">
+                                <i class="bi bi-eye me-1"></i>View/Edit
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>

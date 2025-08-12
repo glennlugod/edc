@@ -1,0 +1,145 @@
+@page "/crform/create"
+@page "/crform/edit/{CRFId:guid}"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@using EDCApp.Models
+@using Microsoft.AspNetCore.Components
+@using Microsoft.Extensions.Configuration
+@using Microsoft.Identity.Web
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+@inject ITokenAcquisition TokenAcquisition
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+
+<PageTitle>@(IsEditMode ? "Edit CRF" : "Create CRF")</PageTitle>
+
+<div class="container">
+    <h3>@(IsEditMode ? "Edit CRF" : "Create New CRF")</h3>
+
+    <EditForm Model="@currentCRF" OnValidSubmit="@HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label class="form-label">CRF Title</label>
+                <InputText class="form-control" @bind-Value="currentCRF.CRFTitle" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Form Type</label>
+                <InputSelect class="form-control" @bind-Value="currentCRF.FormType">
+                    <option value="1">Standard</option>
+                    <option value="2">Supplemental</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Completed Date</label>
+                <InputDate class="form-control" @bind-Value="currentCRF.CompletedDate" />
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Verified By</label>
+                <InputSelect class="form-control" @bind-Value="currentCRF.VerifiedById">
+                    @* TODO: Populate from actual users *@
+                    <option value="">Select Verifier</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Visit</label>
+                <InputSelect class="form-control" @bind-Value="currentCRF.VisitId">
+                    @* TODO: Populate from actual visits *@
+                    <option value="">Select Visit</option>
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-primary">@(IsEditMode ? "Update" : "Create") CRF</button>
+            <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Cancel</button>
+        </div>
+    </EditForm>
+
+    @if (IsEditMode)
+    {
+        <h4 class="mt-4">CRF Items</h4>
+        <div class="mb-3">
+            <button class="btn btn-success" @onclick="OpenCreateCRFItemDialog">Add CRF Item</button>
+        </div>
+
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Field Name</th>
+                    <th>Field Value</th>
+                    <th>Units</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in crfItems)
+                {
+                    <tr>
+                        <td>@item.FieldName</td>
+                        <td>@item.FieldValue</td>
+                        <td>@item.Units</td>
+                        <td>@GetItemStatusDisplay(item.ItemStatus)</td>
+                        <td>
+                            <button class="btn btn-sm btn-info me-2" @onclick="() => OpenEditCRFItemDialog(item)">Edit</button>
+                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteCRFItem(item.Id)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (showCRFItemDialog)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditingCRFItem ? "Edit" : "Create") CRF Item</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCRFItemDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@currentCRFItem" OnValidSubmit="@SaveCRFItem">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Field Name</label>
+                            <InputText class="form-control" @bind-Value="currentCRFItem.FieldName" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Field Value</label>
+                            <InputText class="form-control" @bind-Value="currentCRFItem.FieldValue" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Units</label>
+                            <InputText class="form-control" @bind-Value="currentCRFItem.Units" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Item Status</label>
+                            <InputSelect class="form-control" @bind-Value="currentCRFItem.ItemStatus">
+                                <option value="1">Pending</option>
+                                <option value="2">In Progress</option>
+                                <option value="3">Completed</option>
+                            </InputSelect>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Save CRF Item</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
