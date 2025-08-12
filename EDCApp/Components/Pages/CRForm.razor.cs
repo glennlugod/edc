@@ -259,8 +259,8 @@ namespace EDCApp.Components.Pages
             return status switch
             {
                 1 => "Pending",
-                2 => "In Progress",
-                3 => "Completed",
+                2 => "Entered",
+                3 => "Verified",
                 _ => "Unknown"
             };
         }
