@@ -1,0 +1,144 @@
+@page "/subjects"
+@rendermode InteractiveServer
+@attribute [Authorize]
+@inject IConfiguration Config
+@inject ITokenAcquisition TokenAcquisition
+@inject NavigationManager NavigationManager
+@inject MicrosoftIdentityConsentAndConditionalAccessHandler ConsentHandler
+@inject ILogger<Subjects> Logger
+
+<PageTitle>Subjects</PageTitle>
+
+<div class="container">
+    <h4 class="mb-4">Clinical Subjects</h4>
+
+    <button class="btn btn-primary mb-3" @onclick="OpenCreateSubjectDialog">
+        <i class="bi bi-plus-circle me-2"></i>Add New Subject
+    </button>
+
+    @if (subjects == null)
+    {
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        <table class="table table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>Subject Code</th>
+                    <th>Screening Date</th>
+                    <th>Enrollment Date</th>
+                    <th>Status</th>
+                    <th>Trial</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var subject in subjects)
+                {
+                    <tr>
+                        <td>@subject.SubjectCode</td>
+                        <td>@subject.ScreeningDate?.ToShortDateString()</td>
+                        <td>@subject.EnrollmentDate?.ToShortDateString()</td>
+                        <td>@((SubjectStatus)subject.Status)</td>
+                        <td>@GetTrialName(subject.TrialId)</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditSubjectDialog(subject)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteConfirmationDialog(subject)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@if (showCreateSubjectDialog)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditMode ? "Edit Subject" : "Create Subject")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateSubjectDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@currentSubject" OnValidSubmit="@SubmitSubject">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="form-group">
+                            <label for="subjectCode">Subject Code</label>
+                            <InputText id="subjectCode" class="form-control" @bind-Value="currentSubject.SubjectCode" />
+                            <ValidationMessage For="@(() => currentSubject.SubjectCode)" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="screeningDate">Screening Date</label>
+                            <InputDate id="screeningDate" class="form-control" @bind-Value="currentSubject.ScreeningDate" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="enrollmentDate">Enrollment Date</label>
+                            <InputDate id="enrollmentDate" class="form-control" @bind-Value="currentSubject.EnrollmentDate" />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="status">Subject Status</label>
+                            <InputSelect id="status" class="form-control" @bind-Value="currentSubject.Status">
+                                @foreach (SubjectStatus status in Enum.GetValues(typeof(SubjectStatus)))
+                                {
+                                    <option value="@((int)status)">@status</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="trial">Trial</label>
+                            <InputSelect id="trial" class="form-control" @bind-Value="currentSubject.TrialId">
+                                @foreach (var trial in trials)
+                                {
+                                    <option value="@trial.Id">@trial.TrialName</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateSubjectDialog">Cancel</button>
+                            <button type="submit" class="btn btn-primary">@(isEditMode ? "Update" : "Create")</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirmation)
+{
+    <div class="modal" tabindex="-1" style="display:block" role="dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete the subject '@(subjectToDelete?.SubjectCode)'?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
