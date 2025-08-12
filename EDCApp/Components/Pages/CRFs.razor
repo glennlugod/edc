@@ -40,7 +40,16 @@
                 {
                     <tr>
                         <td>@crf.CRFTitle</td>
-                        <td>@crf.FormType</td>
+                        <td>
+                            @(crf.FormType switch
+                            {
+                                1 => "Vitals",
+                                2 => "Lab",
+                                3 => "AE",
+                                4 => "ConMed",
+                                _ => crf.FormType.ToString()
+                            })
+                        </td>
                         <td>@crf.CompletedDate?.ToShortDateString()</td>
                         <td>@crf.CreatedOn.ToShortDateString()</td>
                         <td>

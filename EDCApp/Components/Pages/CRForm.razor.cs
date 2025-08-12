@@ -14,6 +14,8 @@ namespace EDCApp.Components.Pages
             CRFTitle = ""
         };
         private List<CRFItem> crfItems = new List<CRFItem>();
+        private List<Visit> visits = new List<Visit>(); // List to store visits
+        private List<User> users = new List<User>(); // List to store users
 
         private bool IsEditMode => CRFId.HasValue;
 
@@ -45,6 +47,10 @@ namespace EDCApp.Components.Pages
                 // Connect to Dataverse
                 ServiceClient = new ServiceClient(new Uri(dataverseUrl), tokenProvider, true);
 
+                // Load visits and users first
+                await LoadVisits();
+                await LoadUsers();
+
                 if (IsEditMode)
                 {
                     await LoadCRF();
@@ -65,6 +71,68 @@ namespace EDCApp.Components.Pages
             }
         }
 
+        private async Task LoadVisits()
+        {
+            try
+            {
+                if (ServiceClient == null)
+                {
+                    throw new InvalidOperationException("ServiceClient is not initialized.");
+                }
+
+                var query = new QueryExpression("new_visit")
+                {
+                    ColumnSet = new ColumnSet("new_visitid", "new_visit_number", "new_visit_date")
+                };
+
+                var result = await Task.Run(() => ServiceClient.RetrieveMultiple(query));
+
+                visits = result.Entities.Select(entity => new Visit
+                {
+                    VisitId = entity.GetAttributeValue<Guid>("new_visitid"),
+                    VisitNumber = entity.GetAttributeValue<string>("new_visit_number"),
+                    VisitDate = entity.GetAttributeValue<DateTime>("new_visit_date"),
+                    Status = entity.GetAttributeValue<OptionSetValue>("new_status")?.Value ?? 0,
+                    SubjectId = entity.GetAttributeValue<Guid>("new_subject")
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load Visits: {ex.Message}");
+            }
+        }
+
+        private async Task LoadUsers()
+        {
+            try
+            {
+                if (ServiceClient == null)
+                {
+                    throw new InvalidOperationException("ServiceClient is not initialized.");
+                }
+
+                var query = new QueryExpression("systemuser")
+                {
+                    ColumnSet = new ColumnSet("systemuserid", "fullname", "internalemailaddress", "firstname", "lastname")
+                };
+
+                var result = await Task.Run(() => ServiceClient.RetrieveMultiple(query));
+
+                users = result.Entities.Select(entity => new User
+                {
+                    UserId = entity.GetAttributeValue<Guid>("systemuserid"),
+                    UserName = entity.GetAttributeValue<string>("fullname"),
+                    Email = entity.GetAttributeValue<string>("internalemailaddress"),
+                    FirstName = entity.GetAttributeValue<string>("firstname"),
+                    LastName = entity.GetAttributeValue<string>("lastname")
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load Users: {ex.Message}");
+            }
+        }
+
         private async Task LoadCRF()
         {
             try
@@ -75,7 +143,7 @@ namespace EDCApp.Components.Pages
                 }
 
                 var entity = await Task.Run(() => ServiceClient.Retrieve("new_crf", CRFId.Value, 
-                    new ColumnSet("new_crfid", "new_crf_title", "new_form_type", "new_completed_date", "createdon", "modifiedon")));
+                    new ColumnSet("new_crfid", "new_crf_title", "new_form_type", "new_completed_date", "new_visit", "new_verified_by", "createdon", "modifiedon")));
 
                 currentCRF = new CRF
                 {
@@ -83,6 +151,8 @@ namespace EDCApp.Components.Pages
                     CRFTitle = entity.GetAttributeValue<string>("new_crf_title"),
                     FormType = entity.GetAttributeValue<OptionSetValue>("new_form_type")?.Value ?? 0,
                     CompletedDate = entity.GetAttributeValue<DateTime?>("new_completed_date"),
+                    VisitId = entity.GetAttributeValue<EntityReference>("new_visit").Id,
+                    VerifiedById = entity.GetAttributeValue<EntityReference>("new_verified_by").Id,
                     CreatedOn = entity.GetAttributeValue<DateTime>("createdon"),
                     ModifiedOn = entity.GetAttributeValue<DateTime>("modifiedon")
                 };
@@ -135,6 +205,8 @@ namespace EDCApp.Components.Pages
             }
         }
 
+        // Rest of the existing methods remain the same...
+        // (Previous implementation of other methods)
         private async Task HandleSubmit()
         {
             try

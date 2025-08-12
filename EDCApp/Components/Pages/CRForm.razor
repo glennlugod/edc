@@ -29,8 +29,10 @@
             <div class="col-md-6 mb-3">
                 <label class="form-label">Form Type</label>
                 <InputSelect class="form-control" @bind-Value="currentCRF.FormType">
-                    <option value="1">Standard</option>
-                    <option value="2">Supplemental</option>
+                    <option value="1">Vitals</option>
+                    <option value="2">Lab</option>
+                    <option value="3">AE</option>
+                    <option value="4">ConMed</option>
                 </InputSelect>
             </div>
 
@@ -42,16 +44,22 @@
             <div class="col-md-6 mb-3">
                 <label class="form-label">Verified By</label>
                 <InputSelect class="form-control" @bind-Value="currentCRF.VerifiedById">
-                    @* TODO: Populate from actual users *@
                     <option value="">Select Verifier</option>
+                    @foreach (var user in users)
+                    {
+                        <option value="@user.UserId">@user.UserName (@user.Email)</option>
+                    }
                 </InputSelect>
             </div>
 
             <div class="col-md-6 mb-3">
                 <label class="form-label">Visit</label>
                 <InputSelect class="form-control" @bind-Value="currentCRF.VisitId">
-                    @* TODO: Populate from actual visits *@
                     <option value="">Select Visit</option>
+                    @foreach (var visit in visits)
+                    {
+                        <option value="@visit.VisitId">@visit.VisitNumber (@visit.VisitDate.ToString("d"))</option>
+                    }
                 </InputSelect>
             </div>
         </div>
