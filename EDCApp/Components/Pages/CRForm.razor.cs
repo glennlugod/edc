@@ -222,8 +222,10 @@ namespace EDCApp.Components.Pages
                     var entity = new Entity("new_crf", currentCRF.Id)
                     {
                         ["new_crf_title"] = currentCRF.CRFTitle,
-                        ["new_form_type"] = currentCRF.FormType,
-                        ["new_completed_date"] = currentCRF.CompletedDate
+                        ["new_form_type"] = new OptionSetValue(currentCRF.FormType),
+                        ["new_completed_date"] = currentCRF.CompletedDate,
+                        ["new_visit"] = new EntityReference("new_visit", currentCRF.VisitId ?? Guid.Empty),
+                        ["new_verified_by"] = new EntityReference("systemuser", currentCRF.VerifiedById ?? Guid.Empty)
                     };
 
                     await Task.Run(() => ServiceClient.Update(entity));
@@ -234,8 +236,10 @@ namespace EDCApp.Components.Pages
                     var entity = new Entity("new_crf")
                     {
                         ["new_crf_title"] = currentCRF.CRFTitle,
-                        ["new_form_type"] = currentCRF.FormType,
-                        ["new_completed_date"] = currentCRF.CompletedDate
+                        ["new_form_type"] = new OptionSetValue(currentCRF.FormType),
+                        ["new_completed_date"] = currentCRF.CompletedDate,
+                        ["new_visit"] = new EntityReference("new_visit", currentCRF.VisitId ?? Guid.Empty),
+                        ["new_verified_by"] = new EntityReference("systemuser", currentCRF.VerifiedById ?? Guid.Empty)
                     };
 
                     currentCRF.Id = await Task.Run(() => ServiceClient.Create(entity));
@@ -305,8 +309,8 @@ namespace EDCApp.Components.Pages
                         ["new_field_name"] = currentCRFItem.FieldName,
                         ["new_field_value"] = currentCRFItem.FieldValue,
                         ["new_units"] = currentCRFItem.Units,
-                        ["new_status"] = currentCRFItem.ItemStatus,
-                        ["new_crf"] = currentCRFItem.CRFId
+                        ["new_status"] = new OptionSetValue(currentCRFItem.ItemStatus),
+                        ["new_crf"] = new EntityReference("new_crf", currentCRF.Id) // Use EntityReference instead of Guid
                     };
 
                     currentCRFItem.Id = await Task.Run(() => ServiceClient.Create(entity));
@@ -320,7 +324,8 @@ namespace EDCApp.Components.Pages
                         ["new_field_name"] = currentCRFItem.FieldName,
                         ["new_field_value"] = currentCRFItem.FieldValue,
                         ["new_units"] = currentCRFItem.Units,
-                        ["new_status"] = currentCRFItem.ItemStatus
+                        ["new_status"] = new OptionSetValue(currentCRFItem.ItemStatus),
+                        ["new_crf"] = new EntityReference("new_crf", currentCRF.Id) // Use EntityReference instead of Guid
                     };
 
                     await Task.Run(() => ServiceClient.Update(entity));
